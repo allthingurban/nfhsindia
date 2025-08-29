@@ -1,0 +1,66 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+plot(cars)
+```
+
+
+hv211:Motor Cycle (39%)
+hv212: Car Truck (39.9)
+sh50z: Tractor (40.16)
+sh50q: AC (44.1)
+sh50r: Washing Machine (45.25)
+sh50y: Threhser (45.42)
+hv243e: CT (45.92)
+sh50x=Water Pump (49.56)
+sh61==1 & hv215 %in% c(35:39): Owned Pucca House
+
+```{r}
+nfhs6_hh_wash%>%
+  filter(hv025==2 & sh49==1)%>%
+  mutate(liveilhood_poverty=if_else(hv246==0 & hv244==0,"Yes","No"),
+         asset_poor=if_else(hv211==1 | hv212==1 | sh50z==1 | sh50q==1 | sh50r==1 | sh50y==1 | hv243e==1 | sh50x==1 | (sh61==1 & hv215 %in% c(35:39)) ,"No","Yes"),
+         dummy_yn="All India")%>%group_by(asset_poor, liveilhood_poverty)%>% summarise(tot_n=sum(shweight))%>%spread(key = "liveilhood_poverty", value="tot_n")
+crosstab_3way(x=dummy_yn,z=asset_poor, y=liveilhood_poverty, weight = shweight,unwt_n = TRUE,)
+```
+
+```{r}
+nfhs6_hh_variable[c(58:64, 110:115,117,199:213),]
+```
+
+```{r}
+# Load packages
+library(FactoMineR)   # for MCA
+library(dplyr)
+
+# Suppose df has: hh_id, car, motorbike, cycle, tv, fan (all 0/1)
+
+
+
+asset_vars <- nfhs6_hh_wash %>%select(58:64, 110:115,117,199:213)%>% names()
+
+# Convert 0/1 into factors for MCA
+df_mca <- nfhs6_hh_wash %>%
+  mutate(across(all_of(asset_vars), as.factor))
+
+# Run MCA
+mca_model <- MCA(df_mca[asset_vars], graph = FALSE)
+
+# First dimension (similar to PCA’s first component)
+nfhs6_hh_wash$asset_index_mca <- mca_model$ind$coord[,1]
+
+# Rank households by MCA wealth index
+nfhs6_hh_wash <- nfhs6_hh_wash %>% arrange(desc(asset_index_mca))
+
+# See which assets load heavily
+print(mca_model$var$coord[,1])
+
+nfhs6_hh_wash %>% mutate(dummy_yn="All India")%>%
+  slice(1:round(0.10 * n()))%>% crosstab(x=dummy_yn,y=sh49,weight = shweight)
+
+```
+

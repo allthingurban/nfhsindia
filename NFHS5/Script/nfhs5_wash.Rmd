@@ -1,0 +1,420 @@
+---
+title: "NFHS 5 Water,Sanitation,and Hygiene"
+output: html_notebook
+---
+
+```{r}
+#required libraries
+library(dplyr)
+library(pollster)
+library(ggplot2)
+library(reshape2)
+library(forcats)
+library(tidyr)
+```
+
+
+
+```{r}
+# Urban/Rural: Toilet Type
+#hv025:Rural/Urban, hv005: HH weight
+
+nfhs5_hh_wash%>%
+  mutate(toilet_type=case_when(hv205 == 11 ~ "Sewer",
+                               hv205 == 12 ~ "Septic",
+                               hv205 %in% c(13,21,22,23) ~ "Pit",
+                               hv205 %in% c(42,43,44) ~ "Dry/Bucket Toilet",
+                               hv205 %in% c(14,15,41,96)~"Others",
+                               hv205 == 31~"No Toilet"))%>%
+crosstab(x=hv025, y=toilet_type, weight = hv005,format = "long",unwt_n = TRUE)%>%
+  select(hv025,toilet_type,pct)%>% #If you only want data and not the graph,then do not use the code after this line.
+  #These lines are for generating graph
+  ggplot(mapping = aes(x=hv025,y=pct,group=toilet_type))+
+  geom_col(aes(fill=toilet_type))+
+  xlab("Type of Area")+
+  ylab("Percent Households")+
+  ggtitle("Type of Toilet")+
+  geom_text(mapping=aes(label = round(pct,1)),angle=0,
+              position = position_stack(vjust=0.5),size=4,color="black")
+```
+
+```{r}
+nfhs5_hh_wash%>%
+  mutate(toilet_type=case_when(hv205 == 11 ~ "Sewer",
+                               hv205 == 12 ~ "Septic",
+                               hv205 %in% c(13,21,22,23) ~ "Pit",
+                               hv205 %in% c(42,43,44) ~ "Dry/Bucket Toilet",
+                               hv205 %in% c(14,15,41,96)~"Others",
+                               hv205 == 31~"No Toilet"))%>%
+crosstab(x=hv024, y=toilet_type, weight = shweight,format = "wide")%>%
+  mutate(hv024 = fct_reorder(hv024, desc(`No Toilet`)))%>%
+  melt(id="hv024")%>%
+  filter(variable!="n")%>%
+  ggplot(mapping = aes(hv024,y=value,group=variable))+
+  geom_col(aes(fill=variable))+
+  xlab("State")+
+  ylab("Percent Households")+
+  ggtitle("Type of Toilet")+
+  geom_text(mapping=aes(label = round(value,1)),angle=0,
+              position = position_stack(vjust=0.5),size=4,color="black")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+
+
+```{r}
+
+#State and Urban/Rural Toilet type
+nfhs5_hh_wash%>%
+  mutate(toilet_type=case_when(hv205 == 11 ~ "Sewer",
+                               hv205 == 12 ~ "Septic",
+                               hv205 %in% c(13,21,22,23) ~ "Pit",
+                               hv205 %in% c(42,43,44) ~ "Dry/Bucket Toilet",
+                               hv205 %in% c(14,15,41,96)~"Others",
+                               hv205 == 31~"No Toilet"),
+          wealth_group=case_when(hv270 %in% c(1,2)~"Poor",
+                                hv270 %in% c(3)~"Middler",
+                                hv270 %in% c(4,5)~"Rich"))%>%
+crosstab_3way(x=wealth_group, y=toilet_type,z=hv025, weight = hv005,unwt_n = TRUE)%>%
+  filter(hv025=="urban")
+```
+
+
+```{r}
+#State and Wealth: Toilet type (Only for urban)
+nfhs6_hh_wash%>%
+  filter(hv025==1)%>%
+  mutate(toilet_type=case_when(hv205 == 11 ~ "Sewer",
+                               hv205 == 12 ~ "Septic",
+                               hv205 %in% c(13,21,22,23) ~ "Pit",
+                               hv205 %in% c(42,43,44) ~ "Dry/Bucket Toilet",
+                               hv205 %in% c(14,15,41,96)~"Others",
+                               hv205 == 31~"No Toilet"))%>%
+    mutate(wealth_group=case_when(sv270us %in% c(1,2)~"Poor",
+                                  sv270us ==3 ~"Middler",
+                                  sv270us %in% c(4,5)~"Rich"))%>%
+crosstab_3way(x=hv024, y=toilet_type,z=sv270us, weight = shweight)
+
+```
+
+
+
+```{r}
+
+nfhs6_hh_wash%>%
+  filter(hv025==1)%>%
+  mutate(toilet_type=case_when(hv205 == 11 ~ "Sewer",
+                               hv205 == 12 ~ "Septic",
+                               hv205 %in% c(13,21,22,23) ~ "Pit",
+                               hv205 %in% c(42,43,44) ~ "Dry/Bucket Toilet",
+                               hv205 %in% c(14,15,41,96)~"Others",
+                               hv205 == 31~"No Toilet"))%>%
+crosstab_3way(x=hv024, y=sh45,z=toilet_type, weight = shweight,unwt_n = TRUE)
+```
+
+
+
+```{r}
+nfhs6_hh_wash%>%
+  filter(hv025==2)%>%
+  mutate(toilet_type=case_when(hv205 == 11 ~ "Sewer",
+                               hv205 == 12 ~ "Septic",
+                               hv205 %in% c(13,21,22,23) ~ "Pit",
+                               hv205 %in% c(42,43,44) ~ "Dry/Bucket Toilet",
+                               hv205 %in% c(14,15,41,96)~"Others",
+                               hv205 == 31~"No Toilet"),
+         wealth_group=case_when(hv270 %in% c(1,2)~"Poor",
+                                hv270 %in% c(3)~"Middler",
+                                hv270 %in% c(4,5)~"Rich"))%>%
+crosstab_3way(x=hv024, y=toilet_type,z=wealth_group, weight = hv005)
+```
+
+
+```{r}
+nfhs6_hh_wash%>%
+  mutate(dw_source=case_when(hv201 == 11 ~ "Piped_Dwelling",
+                               hv201 %in% c(12,13) ~ "Piped_Yard/Neighbour",
+                               hv201 == 14 ~ "Public Tap",
+                               hv201 %in% c(21) ~ "Tubewell",
+                               hv201 %in% c(31,32) ~ "Dugwell",
+                               hv201 %in% c(41,42,43,51)~"Surface/Rain Water",
+                               hv201 %in% c(61,62)~"Tanker",
+                               hv201 %in% c(71,92)~"Bottled/RO",
+                               hv201 %in% c(96)~"Others"))%>%
+  filter(hv025==2)%>%
+crosstab_3way(x=hv024,z=sh49, y=dw_source, weight = hv005)%>%
+  mutate(piped_dwelling=`Piped_Yard/Neighbour`+`Piped_Dwelling`)%>%select(1,2,13)%>%
+  spread(key="sh49",value="piped_dwelling")
+
+
+  
+```
+
+```{r}
+nfhs6_hh_wash%>%
+  mutate(dw_source=case_when(hv201 == 11 ~ "Piped_Dwelling",
+                               hv201 %in% c(12,13) ~ "Piped_Yard/Neighbour",
+                               hv201 == 14 ~ "Public Tap",
+                               hv201 %in% c(21) ~ "Tubewell",
+                               hv201 %in% c(31,32) ~ "Dugwell",
+                               hv201 %in% c(41,42,43,51)~"Surface/Rain Water",
+                               hv201 %in% c(61,62)~"Tanker",
+                               hv201 %in% c(71,92)~"Bottled/RO",
+                               hv201 %in% c(96)~"Others"))%>%
+crosstab_3way(x=hv025, y=dw_source,z=hv270, weight = hv005)
+```
+
+```{r}
+nfhs6_hh_wash%>%
+  mutate(dw_source=case_when(hv201 == 11 ~ "Piped_Dwelling",
+                               hv201 %in% c(12,13) ~ "Piped_Yard/Neighbour",
+                               hv201 == 14 ~ "Public Tap",
+                               hv201 %in% c(21) ~ "Tubewell",
+                               hv201 %in% c(31,32) ~ "Dugwell",
+                               hv201 %in% c(41,42,43,51)~"Surface/Rain Water",
+                               hv201 %in% c(61,62)~"Tanker",
+                               hv201 %in% c(71,92)~"Bottled/RO",
+                               hv201 %in% c(96)~"Others"))%>%
+crosstab_3way(x=hv025, y=dw_source,z=hv235, weight = hv005)
+  
+
+```
+
+```{r}
+nfhs6_hh_wash %>%
+  mutate(car_ownership=case_when(hv210==1 & hv211==0 & hv212==0~"Only Bicycle",
+                                 hv210==0 & hv211==0 & hv212==0~"No Vehicle",
+                                 hv211==1 & hv212==0~"Motor Cycle",
+                                 hv212==1~"Car"))%>%
+  crosstab_3way(x=hv024,y=car_ownership,z=hv025,weight = shweight)%>%
+  filter(hv025=="urban")
+
+nfhs6_hh_wash %>%
+  crosstab(x=sh50z,y=hv212,weight = shweight)
+
+
+table(nfhs6_hh_wash$sh61)
+table(nfhs6_hh_wash$sh46,nfhs6_hh_wash$sh50x)
+```
+
+
+```{r}
+nfhs6_hh_wash%>%
+  filter()
+  mutate(toilet_type=case_when(hv205 == 11 ~ "Sewer",
+                               hv205 == 12 ~ "Septic",
+                               hv205 %in% c(13,21,22,23) ~ "Pit",
+                               hv205 %in% c(42,43,44) ~ "Dry/Bucket Toilet",
+                               hv205 %in% c(14,15,41,96)~"Others",
+                               hv205 ==31~"OD"))%>%
+  crosstab(x=hv025, y=toilet_type, weight = hv005,unwt_n = TRUE)
+```
+
+```{r}
+#IHHL: Households having individual latrines (Includes OD)
+#Shared: Households having shared latrine (Includes OD)
+#No Toilet: Households having no toilet
+nfhs6_hh_wash%>%
+  mutate(toilet_access=case_when(hv205 !=31 & hv225==0~ "IHHL",
+                               hv205 != 31 & hv225==1 ~ "Shared",
+                               hv205 ==31 & sh44==1 & sh45==1 ~ "IHHL",
+                               hv205 ==31 & sh44==1 & sh45 %in% c(2,3) ~ "Shared",
+                               hv205 ==31 & sh44==0~"No Toilet"),dummy_cat="Overall")%>%
+crosstab(x=dummy_cat, y=toilet_access, weight = hv005,unwt_n = TRUE)
+```
+
+```{r}
+#IHHL: Households having individual latrines (Includes OD)
+#Shared: Households having shared latrine (Includes OD)
+#No Toilet: Households having no toilet
+nfhs6_hh_wash%>%
+  mutate(toilet_access=case_when(hv205 !=31 & hv225==0~ "IHHL",
+                               hv205 != 31 & hv225==1 ~ "Shared",
+                               hv205 ==31 & sh44==1 & sh45==1 ~ "IHHL_OD",
+                               hv205 ==31 & sh44==1 & sh45 %in% c(2,3) ~ "Shared_OD",
+                               hv205 ==31 & sh44==0~"No_Toilet_OD"))%>%
+crosstab(x=hv025, y=toilet_access, weight = hv005,unwt_n = TRUE)
+```
+
+                10  FLUSH TOILET
+                               11  Flush to piped sewer system
+                               12  Flush to septic tank
+                               13  Flush to pit latrine
+                               14  Flush to somewhere else
+                               15  Flush, don't know where
+                20  PIT TOILET LATRINE
+                               21  Ventilated Improved Pit latrine (VIP)
+                               22  Pit latrine with slab
+                               23  Pit latrine without slab/open pit
+                30  NO FACILITY
+                               31  No facility/bush/field
+                41  Composting toilet
+                42  Bucket toilet
+                43  Hanging toilet/latrine
+                44  Dry toilet
+                96  Other
+           (m)  99  Missing
+
+
+```{r}
+nfhs5_hh_wash%>%
+  filter(hv025==2)%>%
+  mutate(toilet_type=case_when(hv205 == 11 ~ "Flush_Sewer",
+                               hv205 == 12 ~ "Flush_Septic",
+                               hv205 %in% c(13) ~ "Flush_Pit",
+                               hv205 %in% c(14,15) ~ "Flush_Others",
+                               hv205 %in% c(21) ~ "Pit_Ventilated",
+                               hv205 %in% c(22) ~ "Pit_Closed",
+                               hv205 %in% c(23) ~ "Pit_Open",
+                               hv205 %in% c(31) ~ "No Toilet",
+                               hv205 %in% c(41) ~ "Composting_Toilet",
+                               hv205 %in% c(42,43,44,96)~"Others"))%>%
+crosstab(y=toilet_type, x=shdist, weight = shweight)%>%
+  filter(shdist=="balod")
+```
+
+```{r}
+#Owns land
+nfhs6_hh_wash%>%
+  filter(hv025==2)%>%
+crosstab_3way(x=hv024,z=sh49, y=hv244, weight = hv005)%>%select(1,2,3)%>%
+  spread(key="sh49",value="no")
+
+write.csv(nfhs6_hh_wash%>%
+  filter(hv025==2)%>%
+  mutate(shdist=factor(shdist))%>%
+crosstab_3way(x=shdist,z=sh49, y=hv244, weight = hv005)%>%select(1,2,3)%>%
+  spread(key="sh49",value="no"),"landless_rural_sc.csv",row.names = FALSE)
+
+nfhs6_hh_wash%>%
+  filter(hv025==2)%>%
+crosstab(x=sh49, y=hv244, weight = hv005)%>%mutate(area="All India")%>%select(1,2,5)%>%
+  spread(key="sh49",value="no")
+```
+
+
+```{r}
+#Owns land
+nfhs6_hh_wash%>%
+  filter(hv025==2)%>%
+  mutate(land_holding=case_when(is.na(hv245)~"No Land",
+                                hv245<=.2~"Less than .5 acre",
+                                hv245>.2~"Greater than .5 acre"))%>%
+crosstab_3way(x=hv024,z=sh49, y=land_holding, weight = hv005)%>%select(1,2,)%>%
+  spread(key="sh49",value="no")
+
+nfhs6_hh_wash%>%
+  filter(hv025==2)%>%
+  mutate(land_holding=case_when(is.na(hv245)~"No Land",
+                                hv245<=1~"Less than .5 acre",
+                                hv245>1~"Greater than .5 acre"))%>%
+crosstab(x=sh49, y=land_holding, weight = hv005)
+```
+
+```{r}
+#Owns Livestock
+nfhs6_hh_wash%>%
+  filter(hv025==2)%>%
+crosstab_3way(x=hv024,z=sh49, y=hv246, weight = hv005)%>%select(1,2,3)%>%
+  spread(key="sh49",value="no")
+
+write.csv(nfhs6_hh_wash%>%
+  filter(hv025==2)%>%
+  mutate(shdist=factor(shdist))%>%
+crosstab_3way(x=shdist,z=sh49, y=hv246, weight = hv005)%>%select(1,2,3)%>%
+  spread(key="sh49",value="no"),"no_livestock_rural_sc_hh.csv",row.names=FALSE)
+
+nfhs6_hh_wash%>%
+  filter(hv025==2)%>%
+crosstab(x=sh49, y=hv246, weight = hv005)
+```
+
+```{r}
+#Bank Account
+nfhs6_hh_wash%>%
+  filter(hv025==2)%>%
+crosstab_3way(x=hv024,z=sh49, y=hv247, weight = hv005)%>%select(1,2,3)%>%
+  spread(key="sh49",value="no")
+```
+
+
+```{r}
+nfhs6_hh_wash%>%
+  filter(hv025==2)%>%
+crosstab_3way(x=hv024,z=sh49, y=sh64, weight = hv005)%>%select(1,2,3)%>%
+  spread(key="sh49",value="no")
+```
+
+```{r}
+
+```
+
+```{r}
+nfhs6_hh_wash%>%
+  filter(hv025==2)%>%
+crosstab_3way(x=hv024,z=sh49, y=sv270rs, weight = hv005)%>%select(1,2,3)%>%
+  spread(key="sh49",value="no")
+
+nfhs6_hh_wash%>%
+  filter(hv025==2)%>%
+crosstab(x=sh49, y=sv270rs, weight = hv005)
+```
+
+
+```{r}
+nfhs6_hh_wash%>%
+  filter(hv025==2)%>%
+  mutate(poorest_of_poor=case_when(hv246==0 & hv244==0 & sv270rs %in% c(1,2)~"Poorest of Poor",
+                                   hv246!=0 | hv244!=0 | !sv270rs %in% c(1,2)~"Not poorest of poor"))%>%
+crosstab(x=sh49, y=poorest_of_poor, weight = hv005)%>%select(1,2,4)%>%
+  spread(key="sh49",value="poorest_of_poor")
+
+write.csv(nfhs6_hh_wash%>%
+  filter(hv025==2)%>%
+  mutate(shdist=factor(shdist))%>%
+  mutate(poorest_of_poor=case_when(hv246==0 & hv244==0 & sv270rs %in% c(1,2)~"Poorest of Poor",
+                                   hv246!=0 | hv244!=0 | !sv270rs %in% c(1,2)~"Not poorest of poor"))%>%
+crosstab_3way(x=shdist,z=sh49, y=poorest_of_poor, weight = hv005)%>%select(1,2,4)%>%
+  spread(key="sh49",value="Poorest of Poor"),file = "poorest_of_poor.csv",row.names = FALSE)
+
+nfhs6_hh_wash%>%
+  filter(hv025==2)%>%
+  mutate(poorest_of_poor=case_when(hv246==0 & hv244==0 ~"Poorest of Poor",
+                                   hv246!=0 | hv244!=0 ~"Not poorest of poor"))%>%
+crosstab_3way(x=hv024,z=sh49, y=poorest_of_poor, weight = shweight,unwt_n = TRUE)%>% write_df_to_gsheet_oauth(sheet_url = "1YljQRjF-CEUw4yvod-oFnl2cpqfH_MKMRwz-uQpHLMs", sheet_name = "state_pooret_poor_nfhs")
+
+write.csv(nfhs6_hh_wash%>%
+  filter(hv025==2)%>%
+    mutate(shdist=factor(shdist))%>%
+  mutate(poorest_of_poor=case_when(hv246==0 & hv244==0 ~"Poorest of Poor",
+                                   hv246!=0 | hv244!=0 ~"Not poorest of poor"))%>%
+crosstab_3way(x=shdist,z=sh49, y=poorest_of_poor, weight = shweight,unwt_n = TRUE)%>%select(1,2,4)%>%
+  spread(key="sh49",value="Poorest of Poor"),file = "landless_no_livestock.csv",row.names = FALSE)
+```
+
+
+```{r}
+nfhs6_hh_wash%>%
+  filter(hv025==2)%>%
+crosstab(x=sh49, y=sh71, weight = hv005)
+
+nfhs6_hh_wash%>%
+  filter(hv025==2)%>%
+  mutate(health_insuracen_type=case_when(sh72a+sh72b+sh72c+sh72d+sh72e>0 & sh72a+sh72b+sh72c+sh72d+sh72e<=5 ~"Public",
+                                         sh72f+sh72g>0~"Employer",
+                                         sh72h>0~"Private",
+                                         +sh72x>0~""
+                                         sh72a+sh72b+sh72c+sh72d+sh72e+sh72f+sh72g+sh72h+sh72x==0~"No Insurance"))%>%
+crosstab(x=sh49, y=health_insuracen_type, weight = hv005)
+```
+```{r}
+nfhs6_hh_wash%>%
+  filter(hv025==2)%>%
+crosstab(x=sh49, y=hv215, weight = hv005)
+```
+
+```{r}
+nfhs6_hh_wash
+```
+
+

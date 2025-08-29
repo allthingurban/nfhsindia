@@ -1,0 +1,32 @@
+---
+title: "Household Structure"
+output: html_notebook
+---
+```{r}
+colnames(nfhs6_hh_wash)
+```
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+nfhs5_hh_wash %>%
+  mutate(age_group=case_when(hv220<=18~"Child",
+                             hv220>18 & hv220<=30~"Young",
+                             hv220>30 & hv220<=50~"Adult",
+                             hv220>50~"Sneior"))%>%
+  crosstab(y=hv217,x=age_group,weight=hv005/100)
+  
+```
+
+```{r}
+write.csv(nfhs6_hh_wash %>%
+  mutate(car_ownership=case_when(hv210==1 & hv211==0 & hv212==0~"Only Bicycle",
+                                 hv210==0 & hv211==0 & hv212==0~"No Vehicle",
+                                 hv211==1 & hv212==0~"Motor Cycle",
+                                 hv212==1~"Car"))%>%
+  crosstab(x=hv024,y=car_ownership,weight = shweight),"nfhs6_transport.csv",row.names = FALSE)
+
+```
+
