@@ -1,0 +1,104 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(pollster)
+library(survey)
+library(haven)
+```
+
+
+
+```{r}
+nfhs5_hhmember=read_dta("/media/abhinav/Datahub/Survey/NFHS/NFHS5/HH Member/IAPR7AFL.DTA",col_select = c(1,2,"hv001","hv005","shweight","hv104","hv021","hv022","hv023","hv024","hv025","sh49",67,399:411))
+```
+
+
+Stunting = height-for-age z-score (HAZ) < −2 (severe if < −3)
+
+Wasting = weight-for-height z-score (WHZ) < −2 (severe if < −3)
+
+Underweight = weight-for-age z-score (WAZ) < −2 (severe if < −3)
+
+```{r}
+
+design <- svydesign(
+  id = ~hv021,
+  strata = ~hv022,
+  weights = ~hv005,
+  data = df,
+)
+
+
+svymean(~I(hc5 < -200), design, na.rm = TRUE)
+
+df=nfhs5_hhmember %>% filter(hc1<=59 & !is.na(hc5))%>%
+  mutate(is_stunted=case_when(hc5 < -300 ~ "severe stunting",
+                              hc5 >= -300 & hc5 < -200 ~ "Stunting",
+                              hc5 >= -200 ~ "Normal"),
+         dummY_india="All India")%>%filter(hc5 > -600 & hc5 < 600)%>%
+    crosstab(x = dummY_india, y = is_stunted,weight = design)
+```
+
+```{r}
+
+
+
+# Example data: one row per child
+# sex: 1 = male, 2 = female (zscorer expects this coding)
+# age_months: age in months
+# weight_kg: weight in kilograms
+# height_cm: length/height in centimeters
+# measure: "L" for recumbent length (usually <24 months) or "H" for standing height
+df <- tibble::tribble(
+  ~id, ~sex, ~age_months, ~weight_kg, ~height_cm, ~measure,
+   1,     1,        12,       8.0,        75,     "L",
+   2,     2,        36,      14.0,        95,     "H",
+   3,     1,        24,      10.0,        80,     "H"
+)
+
+# Add WHO z-scores to the dataframe using addWGSR
+# Note: argument names must match variable names in your data; supply them by name
+df_z <- addWGSR(data = nfhs5_hhmember,sex = "hv104",firstPart = "hc2",secondPart = "hc3",index = "wfh")
+
+# The function adds columns such as: waz (weight-for-age Z), haz (length/height-for-age Z), whz (weight-for-height Z)
+# (If your version of zscorer uses slightly different names, inspect names(df_z) after running.)
+names(df_z)  # inspect
+
+# Classify malnutrition per NFHS (WHO thresholds)
+df_classified <- df_z %>%
+  mutate(
+    stunting = case_when(
+      !is.na(haz) & haz < -3 ~ "Severely stunted",
+      !is.na(haz) & haz < -2 ~ "Stunted",
+      !is.na(haz)            ~ "Normal",
+      TRUE                   ~ NA_character_
+    ),
+    wasting = case_when(
+      !is.na(whz) & whz < -3 ~ "Severely wasted",
+      !is.na(whz) & whz < -2 ~ "Wasted",
+      !is.na(whz)            ~ "Normal",
+      TRUE                   ~ NA_character_
+    ),
+    underweight = case_when(
+      !is.na(waz) & waz < -3 ~ "Severely underweight",
+      !is.na(waz) & waz < -2 ~ "Underweight",
+      !is.na(waz)            ~ "Normal",
+      TRUE                   ~ NA_character_
+    ),
+    any_malnutrition = ifelse(
+      ( !is.na(haz) & haz < -2 ) |
+      ( !is.na(whz) & whz < -2 ) |
+      ( !is.na(waz) & waz < -2 ),
+      TRUE, FALSE
+    )
+  )
+
+# View results
+print(df_classified)
+
+```
+
